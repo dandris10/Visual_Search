@@ -68,7 +68,7 @@ def a_star_search(grid, start, target, win):
             path_node = target
             while path_node is not None:
                 if path_node.color != RED:  
-                    path_node.color = BLUE 
+                    path_node.color = GREEN 
                     path_node.draw(win)  
                     print(f"({path_node.row}, {path_node.col})")
                     pygame.display.update() 
@@ -86,8 +86,14 @@ def a_star_search(grid, start, target, win):
             new_total_cost = current_distance + weight + heuristic(neighbor, target)
 
             if new_total_cost < neighbor.total_cost:
+                if neighbor.color == GREEN:
+                     priority_queue.clear()
+                neighbor.color = BLUE 
+                neighbor.draw(win) 
                 neighbor.total_cost = new_total_cost
                 previous[neighbor] = current_node
+                pygame.display.update() 
+                pygame.time.delay(50) 
                 heapq.heappush(priority_queue, (new_total_cost, id(neighbor), neighbor))
 
 def dijkstra(grid, start, target, win):
@@ -99,23 +105,26 @@ def dijkstra(grid, start, target, win):
         current_distance, _, current_node = heapq.heappop(priority_queue)
 
         if current_node.visited:
-            continue
+           continue
 
         current_node.visited = True
 
         if current_node == target:
+            # Reconstruct and draw the path from target back to start
             path_node = target
             while path_node is not None:
-                if path_node.color != RED:  
-                    path_node.color = BLUE 
-                    path_node.draw(win)  
+                if path_node.color != RED:  # Avoid changing the start color
+                    path_node.color = GREEN
+                    path_node.draw(win)
                     print(f"({path_node.row}, {path_node.col})")
-                    pygame.display.update() 
-                    pygame.time.delay(200)  
+                    pygame.display.update()
+                    pygame.time.delay(200)
                 path_node = previous[path_node]
-            return True
+            break  # Exit the loop after finding the path
+
 
         for neighbor, weight in get_neighbors(current_node, grid):
+
             if neighbor.color == BLACK:
                 continue
             
@@ -125,55 +134,91 @@ def dijkstra(grid, start, target, win):
             new_distance = current_node.distance + weight
 
             if new_distance < neighbor.distance:
+                if neighbor.color == GREEN:
+                     priority_queue.clear()
                 neighbor.distance = new_distance
                 previous[neighbor] = current_node
+                neighbor.color = BLUE 
+                neighbor.draw(win)  
+                pygame.display.update() 
+                pygame.time.delay(50)  
                 heapq.heappush(priority_queue, (new_distance, id(neighbor), neighbor))
+                        
 
 def bfs(grid, start, end, win):
     queue = deque([start])
-    start.visited = True;
+    start.visited = True
+    previous = {start: None}  
     
     while queue:
         current = queue.popleft()
+        
         for neighbor, _ in get_neighbors(current, grid):
             if not neighbor.visited and neighbor.color != BLACK:
+                # Check if we've reached the end
                 if neighbor == end:
                     print(f"Final node reached: ({neighbor.row}, {neighbor.col})")
+                    previous[neighbor] = current  # Set the previous node correctly for the end node
+                    # Reconstruct and display the path
+                    path_node = end
+                    while path_node is not None:
+                        if path_node.color != RED:  # Avoid changing the start color
+                            path_node.color = GREEN
+                            path_node.draw(win)
+                            print(f"({path_node.row}, {path_node.col})")
+                            pygame.display.update()
+                            pygame.time.delay(200)
+                        path_node = previous[path_node]
                     return True
-                print(f"({neighbor.row}, {neighbor.col})")
+
                 neighbor.visited = True
                 neighbor.color = BLUE
                 neighbor.draw(win)
+                previous[neighbor] = current  # Correctly link neighbor back to current
                 pygame.display.update()
                 queue.append(neighbor)
-                pygame.time.delay(500)
+                pygame.time.delay(50)
                 
     return False
 
-def dfs(grid, node, end, win):
+
+def dfs(grid, node, end, win, previous=None):
+    if previous is None:
+        previous = {}
+
     if node == end:
         print(f"Final node reached: ({node.row}, {node.col})")
+        # Reconstruct and display the path
+        path_node = end
+        while path_node is not None:
+            if path_node.color != RED:  # Avoid changing the start color
+                path_node.color = GREEN
+                path_node.draw(win)
+                print(f"({path_node.row}, {path_node.col})")
+                pygame.display.update()
+                pygame.time.delay(200)
+            path_node = previous.get(path_node)
         return True  # Found the end node, stop recursion
     
     if node.visited:
-        print(f"Final node reached: ({node.row}, {node.col})")
         return False
 
     node.visited = True
-    print(f"({node.row}, {node.col})")
 
     if node.color != RED:
         node.color = BLUE
         node.draw(win)
         pygame.display.update()
-        pygame.time.delay(500)
+        pygame.time.delay(50)
 
     for neighbor, _ in get_neighbors(node, grid):
         if neighbor.color != BLACK and not neighbor.visited:
-            if dfs(grid, neighbor, end, win):
+            previous[neighbor] = node  # Set the previous node for path reconstruction
+            if dfs(grid, neighbor, end, win, previous):
                 return True
 
     return False
+
 
 def main():
     pygame.init()
